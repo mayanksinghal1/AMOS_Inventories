@@ -1,0 +1,125 @@
+[OSEv3:vars]
+
+ansible_ssh_user=ec2-user
+ansible_become="yes"
+openshift_deployment_type=openshift-enterprise
+# Set variables common for all OSEv3 hosts
+openshift_deployment_type=openshift-enterprise
+openshift_master_api_port=8443
+openshift_master_console_port=8443
+containerized=false
+openshift_release=v3.9
+
+#openshift_master_cluster_hostname=master006-internal.amosdemo.io
+openshift_master_cluster_public_hostname=master006.amosdemo.io
+openshift_master_overwrite_named_certificates=true
+openshift_set_hostname=true
+openshift_install_examples=true
+openshift_image_tag=v3.9.33
+openshift_pkg_version=-3.9.33
+openshift_enable_excluders=false
+openshift_master_logout_url=https://master006.amosdemo.io:8443/login
+
+openshift_master_dynamic_provisioning_enabled=false
+dynamic_volumes_check=False
+
+system_images_registry="registry.access.redhat.com"
+oreg_url_master=registry.access.redhat.com/openshift3/ose-${component}:${version}
+oreg_url_node=registry.access.redhat.com/openshift3/ose-${component}:${version}
+openshift_examples_modify_imagestreams=true
+
+
+openshift_disable_check=disk_availability,docker_image_availability,docker_storage,memory_availability,package_availability,package_version
+openshift_docker_use_system_container=false
+#hosted_logging_deployer_version=latest
+#openshift_logging_install_logging=true
+openshift_node_kubelet_args={'image-gc-high-threshold': ['90'], 'image-gc-low-threshold': ['80']}
+openshift_master_default_subdomain=apps006.amosdemo.io
+openshift_hosted_router_selector='region=infra'
+openshift_registry_selector='region=infra'
+os_sdn_network_plugin_name='redhat/openshift-ovs-multitenant'
+openshift_enable_service_catalog=false
+#ansible_service_broker_install=false
+
+#### Openshift Metric Vars ########
+openshift_metrics_install_metrics=true
+#openshift_hosted_metrics_deploy=true
+metricsPublicUrl=https://hawkular-metrics.apps006.amosdemo.io/hawkular/metrics
+openshift_metrics_hawkular_hostname=hawkular-metrics.{{openshift_master_default_subdomain}}
+#openshift_metrics_cassandra_storage_type=dynamic
+#openshift_metrics_start_cluster=true
+
+#### Logging ####
+openshift_logging_install_logging=true
+openshift_logging_es_pvc_size=100Gi
+openshift_logging_es_pvc_dynamic=true
+#openshift_logging_kibana_hostname=efk.amosdemo.io
+#openshift_logging_storage_kind=dynamic
+
+# Prometheus deployment
+#openshift_hosted_prometheus_deploy=true
+# Use PVCs for persistence
+#openshift_prometheus_storage_type=pvc
+#openshift_prometheus_storage_class=glusterfs-storage
+#openshift_prometheus_alertmanager_storage_type=pvc
+#openshift_prometheus_alertbuffer_storage_type=pvc
+#openshift_prometheus_alertbuffer_pvc_size=10G
+#openshift_prometheus_pvc_access_modes=[ReadWriteOnce]
+#openshift_prometheus_namespace=openshift-metrics
+#openshift_prometheus_node_selector={"region":"infra"}
+
+# Grafana deployment, requires Prometheus
+#openshift_hosted_grafana_deploy=true
+
+nagios_server_hostname=nagios.amosdemo.io
+
+redhat_organization_id=7458042
+redhat_activationkey=AMOS-thomascook
+
+openshift_master_identity_providers=[{'name': 'Other Members', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider','filename': '/etc/origin/master/htpasswd'},{'name': 'Atos Employee(DAS ID)', 'challenge': 'true', 'login': 'true', 'kind': 'LDAPPasswordIdentityProvider', 'attributes': {'id': ['dn'], 'email': ['mail'], 'name': ['cn'], 'preferredUsername': ['uid']}, 'bindDN': 'aoLdapKey=aaG100858,ou=people,dc=atosorigin,dc=com', 'bindPassword': 'DeyR(4II.\wh"62mG+8P', 'insecure': 'false', 'url': 'ldaps://ldap.myatos.net:636/ou=People,dc=atosorigin,dc=com?uid'}]
+openshift_master_htpasswd_file=/usr/share/ansible/openshift-ansible/htpasswd/.htpasswd
+
+openshift_storage_glusterfs_wipe=true
+openshift_storage_glusterfs_is_native=true
+openshift_storage_glusterfs_storageclass=true
+openshift_storage_glusterfs_heketi_is_native=true
+openshift_storage_glusterfs_heketi_is_missing=true
+#openshift_storage_glusterfs_heketi_deploy_is_missing=true
+openshift_hosted_registry_storage_kind=glusterfs
+openshift_storage_glusterfs_namespace=glusterfs
+openshift_storage_glusterfs_name=storage
+os_firewall_use_firewalld=true
+
+openshift_storage_glusterfs_image=registry.access.redhat.com/rhgs3/rhgs-server-rhel7
+openshift_storage_glusterfs_heketi_image=registry.access.redhat.com/rhgs3/rhgs-volmanager-rhel7
+openshift_storage_glusterfs_block_image=registry.access.redhat.com/rhgs3/rhgs-gluster-block-prov-rhel7
+
+
+[OSEv3:children]
+masters
+etcd
+glusterfs
+nodes
+
+
+[masters]
+amos-tc-master06.amosdemo.io ansible_ssh_user=ec2-user ansible_ssh_private_key_file=/home/ec2-user/.ssh/amos-cluster.pem
+
+[etcd]
+amos-tc-master06.amosdemo.io ansible_ssh_user=ec2-user ansible_ssh_private_key_file=/home/ec2-user/.ssh/amos-cluster.pem
+
+[nodes]
+amos-tc-master06.amosdemo.io ansible_ssh_user=ec2-user openshift_node_labels="{'role': 'master'}" ansible_ssh_private_key_file=/home/ec2-user/.ssh/amos-cluster.pem
+amos-tc-infra06.amosdemo.io openshift_node_labels="{'region': 'infra', 'zone': 'eu-central-1a', 'role': 'infra'}" ansible_ssh_user=ec2-user ansible_ssh_private_key_file=/home/ec2-user/.ssh/amos-cluster.pem
+amos-tc-compute06.amosdemo.io openshift_node_labels="{'region': 'primary', 'zone': 'eu-central-1a', 'role': 'infra'}" ansible_ssh_user=ec2-user ansible_ssh_private_key_file=/home/ec2-user/.ssh/amos-cluster.pem
+
+amos-tc-gluster1-06.amosdemo.io ansible_ssh_user=ec2-user openshift_node_labels="{'role': 'app'}" ansible_ssh_private_key_file=/home/ec2-user/.ssh/amos-cluster.pem
+amos-tc-gluster2-06.amosdemo.io ansible_ssh_user=ec2-user openshift_node_labels="{'role': 'app'}" ansible_ssh_private_key_file=/home/ec2-user/.ssh/amos-cluster.pem
+amos-tc-gluster3-06.amosdemo.io ansible_ssh_user=ec2-user openshift_node_labels="{'role': 'app'}" ansible_ssh_private_key_file=/home/ec2-user/.ssh/amos-cluster.pem
+
+[glusterfs]
+amos-tc-gluster1-06.amosdemo.io ansible_ssh_user=ec2-user ansible_ssh_private_key_file=/home/ec2-user/.ssh/amos-cluster.pem glusterfs_devices='[ "/dev/xvde" ]'
+amos-tc-gluster2-06.amosdemo.io ansible_ssh_user=ec2-user ansible_ssh_private_key_file=/home/ec2-user/.ssh/amos-cluster.pem glusterfs_devices='[ "/dev/xvde" ]'
+amos-tc-gluster3-06.amosdemo.io ansible_ssh_user=ec2-user ansible_ssh_private_key_file=/home/ec2-user/.ssh/amos-cluster.pem glusterfs_devices='[ "/dev/xvde" ]'
+
+
