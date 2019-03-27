@@ -1,0 +1,245 @@
+[OSEv3:children]
+masters
+nodes
+etcd
+
+# Set variables common for all OSEv3 hosts
+[OSEv3:vars]
+
+### LGIM Variables
+
+# Cluster
+lgim_domain="inv.adroot.lgim.com"
+lgim_cluster_hostname="ose-master-internal-prod.{{ lgim_domain }}"
+lgim_cluster_public_hostname="ose-master-prod.{{ lgim_domain }}"
+lgim_default_subdomain="prod.openshift.{{ lgim_domain }}"
+
+# Registry
+lgim_btprod_registry="docker-registry-default.btprod.openshift.{{ lgim_domain }}"
+lgim_btprod_registry_staging="{{ lgim_btprod_registry }}/lgim-staging"
+lgim_internal_registry_pvc="ose-prod-shared-ose-dockreg-claim"
+
+# LDAP 
+lgim_ldap_username="ose_ldap_prod"
+lgim_ldap_password="{{ lookup('env', 'OSE_LDAP_PROD_PASSWORD') }}"
+lgim_ldap_server="local-ad.{{ lgim_domain }}"
+
+# Certificates
+lgim_router_certfile="/linux_shared/openshift/conf/router-prod.crt"
+lgim_router_keyfile="/linux_shared/openshift/conf/router-prod.key"
+lgim_master_certfile="/linux_shared/openshift/conf/ose-master-prod.crt"
+lgim_master_keyfile="/linux_shared/openshift/conf/ose-master-prod.key"
+
+lgim_cafile="lgim-adroot-ca.crt"
+lgim_cafile_path="/linux_shared/openshift/conf/{{ lgim_cafile }}"
+
+# Metrics
+lgim_metrics_hostname="hawkular-metrics.{{ lgim_default_subdomain }}"
+lgim_metrics_public_url="https://{{ lgim_metrics_hostname }}/hawkular/metrics"
+lgim_metrics_pvc="metrics-cassandra-1"
+openshift_metrics_hawkular_nodeselector="purpose=infra"
+openshift_metrics_cassandra_nodeselector="purpose=infra"
+openshift_metrics_heapster_nodeselector="purpose=infra"
+
+
+# Logging
+lgim_logging_hostname="logging.{{ lgim_default_subdomain }}"
+lgim_logging_public_url="https://{{ lgim_logging_hostname }}"
+openshift_logging_kibana_nodeselector="purpose=infra"
+openshift_logging_curator_nodeselector="purpose=infra"
+
+
+# Proxy
+lgim_proxy="http://{{ lgim_ldap_username }}:{{ lgim_ldap_password }}@websensecs.{{ lgim_domain }}:8080"
+lgim_internal_registry_ip="172.30.138.73"
+aws_config_lookup="169.254.169.254"
+lgim_cidr_block="10.0.0.0/8"
+
+# NOTE: when doing an upgrade you only need to change this to the new version
+# ensure that the images required for the upgrade are available in lgim_btprod_registry
+ose_image_version=v3.5
+
+### LGIM Variables
+
+# SSH user, this user should allow ssh based auth without requiring a
+# password. If using ssh key based auth, then the key should be managed by an
+# ssh agent.
+ansible_ssh_user=chef_admin
+
+# If ansible_ssh_user is not root, ansible_become must be set to true and the
+# user must be configured for passwordless sudo
+ansible_become=yes
+
+# Debug level for all OpenShift components (Defaults to 2)
+debug_level=2
+
+# deployment type valid values are origin, online, atomic-enterprise, and openshift-enterprise
+deployment_type=openshift-enterprise
+openshift_rolling_restart_mode=system
+
+# Upgrade hooks: should use absolute path but for best practice but
+# openshift_master_upgrade_pre_hook=/usr/share/custom/pre_master.yml
+# openshift_master_upgrade_hook=/usr/share/custom/master.yml
+# openshift_master_upgrade_post_hook=/usr/share/custom/post_master.yml
+
+# Specify the generic release of OpenShift to install. This is used mainly just during installation, after which we
+# rely on the version running on the first master. Works best for containerized installs where we can usually
+# use this to lookup the latest exact version of the container images, which is the tag actually used to configure
+# the cluster. For RPM installations we just verify the version detected in your configured repos matches this
+# release.
+openshift_release={{ ose_image_version }}
+
+# Docker Configuration
+# Add additional, insecure, and blocked registries to global docker configuration
+# For enterprise deployment types we ensure that registry.access.redhat.com is
+# included if you do not include it
+
+openshift_docker_additional_registries={{ lgim_btprod_registry }}
+openshift_docker_insecure_registries={{ lgim_btprod_registry }}
+
+# Alternate image format string, useful if you've got your own registry mirror
+oreg_url={{ lgim_btprod_registry_staging }}/ose-${component}:${version}
+
+# If oreg_url points to a registry other than registry.access.redhat.com we can
+# modify image streams to point at that registry by setting the following to true
+openshift_examples_modify_imagestreams=true
+
+# LDAP auth
+openshift_master_identity_providers=[{'name': 'LGIM_AD', 'challenge': 'true', 'login': 'true', 'kind': 'LDAPPasswordIdentityProvider', 'attributes': {'id': ['dn'], 'email': ['mail'], 'name': ['displayName'], 'preferredUsername': ['cn']}, 'bindDN': 'cn={{ lgim_ldap_username }},OU=Service Accounts,OU=OpenShift,DC=INV,DC=ADRoot,DC=LGIM,DC=COM', 'bindPassword': '{{ lgim_ldap_password }}', 'ca': '{{lgim_cafile }}', 'insecure': 'false', 'url': 'ldaps://{{ lgim_ldap_server }}:636/DC=INV,DC=ADRoot,DC=LGIM,DC=COM?sAMAccountName?sub?(objectClass=user)'}]
+
+# Configure LDAP CA certificate
+openshift_master_ldap_ca_file="{{ lgim_cafile_path }}"
+
+# Cloud Provider Configuration
+openshift_cloudprovider_aws_access_key="{{ lookup('env','AWS_ACCESS_KEY_ID') }}"
+openshift_cloudprovider_aws_secret_key="{{ lookup('env','AWS_SECRET_ACCESS_KEY') }}"
+openshift_cloudprovider_kind=aws
+
+# Enable cockpit
+osm_use_cockpit=true
+#
+# Set cockpit plugins
+osm_cockpit_plugins=['cockpit-kubernetes']
+
+# Native high availability cluster method with optional load balancer.
+# If no lb group is defined, the installer assumes that a load balancer has
+# been preconfigured. For installation the value of
+# openshift_master_cluster_hostname must resolve to the load balancer
+# or to one or all of the masters defined in the inventory if no load
+# balancer is present.
+openshift_master_cluster_method=native
+openshift_master_cluster_hostname={{ lgim_cluster_hostname }}
+openshift_master_cluster_public_hostname={{ lgim_cluster_public_hostname }}
+
+# default subdomain to use for exposed routes
+openshift_master_default_subdomain="{{ lgim_default_subdomain }}"
+
+# OpenShift Router Options
+openshift_router_selector="target=router"
+openshift_hosted_router_selector="target=router"
+openshift_hosted_router_replicas=3
+openshift_hosted_router_registryurl="{{ lgim_btprod_registry_staging }}/ose-haproxy-router:{{ ose_image_version }}"
+openshift_hosted_router_certificate={"certfile": "{{ lgim_router_certfile }}", "keyfile": "{{ lgim_router_keyfile }}", "cafile": "{{ lgim_cafile_path }}"}
+
+# Openshift Registry Options
+openshift_registry_selector="purpose=infra"
+openshift_hosted_registry_selector='purpose=infra'
+openshift_hosted_registry_replicas=3
+openshift_hosted_registry_registryurl="{{ lgim_btprod_registry_staging }}/ose-docker-registry:{{ ose_image_version }}"
+
+# Metrics deployment
+
+# These variables are used in the install and upgrade roles
+# To install or upgrade metrics set openshift_metrics_install_metrics=true
+# To uninstall metrics set openshift_metrics_install_metrics=false 
+openshift_metrics_install_metrics=true
+openshift_metrics_image_prefix="{{ lgim_btprod_registry_staging }}/"
+openshift_metrics_image_version="{{ ose_image_version }}"
+openshift_metrics_cassandra_storage_type=pv
+openshift_metrics_hawkular_hostname="{{ lgim_metrics_hostname }}"
+
+# These are for initial deploy and running config
+openshift_hosted_metrics_deploy=false
+openshift_hosted_metrics_public_url="{{ lgim_metrics_public_url }}"
+
+# Logging deployment
+
+# OSE 3.5 Bug https://bugzilla.redhat.com/show_bug.cgi?id=1430628
+openshift_master_logging_public_url="{{ lgim_logging_public_url }}"
+
+openshift_logging_install_logging=true
+openshift_logging_image_prefix="{{ lgim_btprod_registry_staging }}/"
+openshift_logging_image_version="{{ ose_image_version }}"
+openshift_logging_es_cluster_size=3
+openshift_logging_kibana_hostname="{{ lgim_logging_hostname }}"
+
+openshift_hosted_logging_deploy=false
+openshift_hosted_logging_elasticsearch_cluster_size=3
+openshift_hosted_logging_image_prefix="{{ lgim_btprod_registry_staging }}/"
+openshift_hosted_logging_image_version="{{ ose_image_version }}"
+openshift_hosted_logging_hostname="{{ lgim_logging_hostname }}"
+
+# Configure the multi-tenant SDN plugin (default is 'redhat/openshift-ovs-subnet')
+os_sdn_network_plugin_name='redhat/openshift-ovs-multitenant'
+
+# Disable the OpenShift SDN plugin
+openshift_use_openshift_sdn=true
+
+# Configure SDN cluster network and kubernetes service CIDR blocks. These
+# network blocks should be private and should not conflict with network blocks
+# in your infrastructure that pods may require access to. Can not be changed
+# after deployment.
+osm_cluster_network_cidr=10.220.0.0/16
+openshift_portal_net=172.30.0.0/16
+
+# Configure number of bits to allocate to each host<92>s subnet e.g. 9
+# would mean a /23 network on the host.
+osm_host_subnet_length=8
+
+# Configure master API and console ports.
+openshift_master_api_port=8443
+openshift_master_console_port=8443
+
+# Configure custom ca certificate
+openshift_master_overwrite_named_certificates=true
+openshift_master_named_certificates=[{"certfile": "{{ lgim_master_certfile }}", "keyfile": "{{ lgim_master_keyfile }}", "cafile": "{{ lgim_cafile_path }}"}]
+
+# Configure logrotate scripts
+logrotate_scripts=[{"name": "syslog", "path": "/var/log/cron\n/var/log/maillog\n/var/log/messages\n/var/log/secure\n/var/log/spooler\n", "options": ["daily", "rotate 7", "compress", "sharedscripts", "missingok"], "scripts": {"postrotate": "/bin/kill -HUP `cat /var/run/syslogd.pid 2> /dev/null` 2> /dev/null || true"}}]
+
+# Global Proxy Configuration
+openshift_http_proxy="{{ lgim_proxy }}"
+openshift_https_proxy="{{ lgim_proxy }}"
+openshift_no_proxy='.{{ lgim_domain }},{{ aws_config_lookup }},{{ lgim_cidr_block }},{{ lgim_internal_registry_ip }}'
+openshift_generate_no_proxy_hosts=False
+
+# Configure build defaults, otherwise the config playbook will inject global proxy settings
+openshift_builddefaults_json='{"BuildDefaults":{"configuration":{"apiVersion":"v1","env":[],"kind":"BuildDefaultsConfig"}}}'
+
+# host group for masters
+[masters]
+ieaavlxosemsl01.inv.adroot.lgim.com
+ieabvlxosemsl01.inv.adroot.lgim.com
+ieacvlxosemsl01.inv.adroot.lgim.com
+
+[etcd]
+ieaavlxosemsl01.inv.adroot.lgim.com
+ieabvlxosemsl01.inv.adroot.lgim.com
+ieacvlxosemsl01.inv.adroot.lgim.com
+
+# NOTE: Currently we require that masters be part of the SDN which requires that they also be nodes
+# However, in order to ensure that your masters are not burdened with running pods you should
+# make them unschedulable by adding openshift_schedulable=False any node that's also a master.
+[nodes]
+ieaavlxosemsl01.inv.adroot.lgim.com  openshift_node_labels="{'region': 'primary', 'zone': 'eu-west-la','target':'rsvd','purpose':'master','fluentd':'true','logging-infra-fluentd':'true'}" openshift_schedulable=False
+ieabvlxosemsl01.inv.adroot.lgim.com  openshift_node_labels="{'region': 'primary', 'zone': 'eu-west-lb','target':'rsvd','purpose':'master','fluentd':'true','logging-infra-fluentd':'true'}" openshift_schedulable=False
+ieacvlxosemsl01.inv.adroot.lgim.com  openshift_node_labels="{'region': 'primary', 'zone': 'eu-west-lc','target':'rsvd','purpose':'master','fluentd':'true','logging-infra-fluentd':'true'}" openshift_schedulable=False
+ieaavlxoseifl01.inv.adroot.lgim.com  openshift_node_labels="{'region': 'primary', 'zone': 'eu-west-la','target':'router','purpose':'infra','fluentd':'true','logging-infra-fluentd':'true','logging-es-node':'1'}"
+ieabvlxoseifl01.inv.adroot.lgim.com  openshift_node_labels="{'region': 'primary', 'zone': 'eu-west-lb','target':'router','purpose':'infra','fluentd':'true','logging-infra-fluentd':'true','logging-es-node':'2'}"
+ieacvlxoseifl01.inv.adroot.lgim.com  openshift_node_labels="{'region': 'primary', 'zone': 'eu-west-lc','target':'router','purpose':'infra','fluentd':'true','logging-infra-fluentd':'true','logging-es-node':'3'}"
+ieaavlxosecml01.inv.adroot.lgim.com  openshift_node_labels="{'region': 'primary', 'zone': 'eu-west-la','purpose':'compute','ou':'eai','fluentd':'true','logging-infra-fluentd':'true','eai-platform-l00-es':'true'}"
+ieabvlxosecml01.inv.adroot.lgim.com  openshift_node_labels="{'region': 'primary', 'zone': 'eu-west-lb','purpose':'compute','ou':'eai','fluentd':'true','logging-infra-fluentd':'true','eai-platform-l00-es':'true'}"
+ieaavlxosecml02.inv.adroot.lgim.com  openshift_node_labels="{'region': 'primary', 'zone': 'eu-west-la','purpose':'compute','ou':'investments','fluentd':'true','logging-infra-fluentd':'true'}"
+ieabvlxosecml02.inv.adroot.lgim.com  openshift_node_labels="{'region': 'primary', 'zone': 'eu-west-lb','purpose':'compute','ou':'investments','fluentd':'true','logging-infra-fluentd':'true'}"
+ieacvlxosecml01.inv.adroot.lgim.com  openshift_node_labels="{'region': 'primary', 'zone': 'eu-west-lc','purpose':'compute','ou':'eai','fluentd':'true','logging-infra-fluentd':'true','eai-platform-l00-es':'true'}"
+
