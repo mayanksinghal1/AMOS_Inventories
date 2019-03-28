@@ -1,0 +1,270 @@
+To remove dead containers
+Soln:
+Hello,
+
+Thank you for your time on call. As we discussed that there are no mounts for any device of all the DEAD containers.
+
+So, it will be better to delete the mount locations of these containers from /var/lib/docker/devicemapper/mnt/ location and then restart the docker service.
+
+We do not see any entry in /proc/*/mounts and also confirmed it from the umount command.
+
+It will be good if any Openshift engineer sees it fit to restart the docker service. 
+
+.......................................................................................................................................
+
+To check SMTP connection issue:
+
+Soln:
+nc -v 10.14.53.199 25
+
+.........................................................................................................................................
+     
+If master service goes down:
+
+Soln:
+check the disk space
+du -sh *
+
+.....................................................................................................................
+
+If /elastisearch issue comes-
+
+soln:
+oc project logging
+oc describe pod logging-curator
+oc describe config-map logging curator
+oc edit config-map logging curator (check .operations)
+oc rollout latest dc/logging-curator
+
+
+
+
+
+
+
+How to resolve this kind of incident
+
+Local file system : Moog soft alert : ,Local file system /var/lib/docker/devicemapper is not available // Local file system /var/lib/docker/containers is not available
+Network file system: Moogsoft Alert : ieabvlxosecmn06 : Network file system /var/lib/docker/devicemapper/mnt/4a376a9264a92c74f2d7d673ba109bf9352c7887f9d9dfa1e58452ca582ef505 is not
+
+Comment: As per attached mail Linux team has confirmed the firewall has required rules also ports are open still we are getting this alert which is not clear. 
+ 
+Thus closed/cancelled the inc. 
+
+Attachment: Please also add email attachment also that was ongoing with dryice team.
+
+How to apply oc patch in openshift 
+
+oc patch namespace investments-build-tools -p "{\"metadata\":{\"annotations\":{\"openshift.io/node-selector\":\"ou=investments-ci \"}}}"
+
+SCTASK2329645
+
+We now have a node specifically for running builds, etc.  Therefore, please update the nodeSelector for the investments-build-tools namespace to target nodes with the label "ou=investments-ci". 
+
+
+How to reset our own account expire password
+
+Step 1: Ansible server eg: GB--VLXOSORCN01-mgmt password should work if that is also expire the firstly ask linux team to reset Ansible server password so that you can login as passwordless
+
+Step2: Do sudo as chef_admin
+
+Step3: Do ssh to host where you need to change the password eg: IEACVLXOSEMN01
+
+Step4: you have to become root now not chef_admin (sudo su -)
+
+Step5: passwd a-ra99912
+Put password value: welcome1
+All steps are mentioned in below screenshot
+
+ 
+
+How to check whether our applications in openshift have websense configured or not 
+
+We can to any host either master or node
+
+Cat /etc/sysconfig/docker
+
+Issue: On openshift console developer is getting issue ElasticSearch Pod Status is terminating,(Node was low on resource {Disk Pressure}) 
+
+ 
+
+Resolution: firstly did nslookup for ip-10-240-203-112.inv.adroot.lgim.com
+
+ 
+
+Log Path: /var/log/messages
+You will find out ImageGCFailed messages in logs
+
+This issue mainly occurs due untagged images which should get clear when pruning scripts ran by developer but due to untagging these are getting missed
+
+By this command we can check how many untagged images we have
+
+ 
+
+By running this command we can find out all untagged images with id
+
+ 
+ 
+
+Run this command to remove these untagged images.
+
+ 
+
+
+Important : issues faced during instance upgrade
+
+Command to check how many pods are running before draining the pods
+[root@ieaavlxosemsn01 ~]# oc get pods --all-namespaces -o wide | grep -i running | wc –l
+
+ 
+
+Two other ways if you pods are not getting drained by putting oc adm command
+
+oc adm drain ip-10-240-198-101.inv.adroot.lgim.com --ignore-daemonsets
+oc adm drain ip-10-240-198-101.inv.adroot.lgim.com --ignore-daemonsets --delete-local-data
+oc adm drain ip-10-240-198-101.inv.adroot.lgim.com --ignore-daemonsets --delete-local-data --force
+ 
+
+How to change label if you see <none> instead of compute when you fire oc get nodes
+
+oc label node ip-10-240-192-95.inv.adroot.lgim.com node-role.kubernetes.io/compute=true
+
+ 
+
+How to delete any pod forcefully
+
+oc delete pod new-pi-order-reconciliation-report-api-4-bf8f4 --force --grace-period=0
+ 
+
+How to change value of OU (Organisational Unit)
+
+oc label node ip-10-240-192-182.inv.adroot.lgim.com "ou=dcp" –overwrite
+
+ 
+
+Important updates regarding environment
+
+eai  01,03
+maple: it also run on eai 01, 03
+investment or nexus 02,07
+3-scale 05 
+dcp 04,06 , initially there was digiops also but there was no use of it so its node were completely taken by dcp.
+
+Path of buildsheet
+
+S:\IT\Project Documentation\2 - ACTIVE PROJECTS\Project Madeira\HCL Documents\Transition\Knowledge Transfer\OpenShift\Documents
+
+How to check top imagestreams file
+
+ 
+
+
+INC2210525: multiple moogsoftalerts -Average (1 samples) diskfree on /var/lib/docker/devicemapper and Average (1 samples) disk free on /var/lib/docker/containers is now 15%
+
+Resoltion: Few journal logs have been archived and usage is now below threshold.
+[chef_admin@ieaavlxosemsl01 ~]$ df -h
+/dev/mapper/rhel-root 18G 12G 6.4G 65% /
+
+
+journalctl --vacuum-size=4G   - command we will use to archieve logs, we can select size according to our need (select 2G,3G) this incident we usually called root disk incident. Usually these logs should be clear by linux team.
+
+
+NEW REQUEST
+
+ 
+
+
+ 
+
+
+Command to troubleshoot build failure issues
+ 
+
+
+Where to check docker container specific logs
+
+Oc get projects | grep <projectname>
+Oc project <projectname>
+Oc get pods | grep <podname>
+Oc describe pod <podname>
+
+Now find out which node is mentioned and also what is container ID
+Login to that node
+Below mentioned is the path  
+/var/lib/docker/containers | grep <container ID>
+
+Where to check node specific logs
+
+Logged into this node
+Path : /var/log/messages 
+
+Where to check service related logs
+
+Journalctl logs
+Journalctl --help
+
+Where to check docker registry logs
+
+Oc project default
+Oc get pods
+Oc describe pod <registry pod>
+Find node IP and do nslookup to get node (this will be infra node)
+/var/lib/docker/containers
+
+New request: “Can you share the Openshift namespace, pod and config map ”
+
+Please see the server details below.
+ 
+[a-ad99912@xlxjumpn00 ~]$ nslookup 10.240.214.71
+Server:         10.226.18.13
+Address:        10.226.18.13#53
+ 
+71.214.240.10.in-addr.arpa      name = ieabvlxosecmo01.inv.adroot.lgim.com.
+ 
+[a-ad99912@xlxjumpn00 ~]$
+
+Solution: From above information it is cleared that environment is sandbox
+
+Logged into sandbox master host (IEAAVLXOSEMSO01)
+
+As in the email chain it was mentioned that they were looking for fluentd information so it is obvious that project will be logging
+
+ 
+
+As IP was given so we used oc get pods –o wide to get IP along with POD
+
+ 
+
+As it was clear from pods that it’s a dcp pod and its associated configmap is highlighted below ie dcp
+
+ 
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
